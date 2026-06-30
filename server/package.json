@@ -1,0 +1,20 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "Backend for Medium Blogs Retriever API",
+  "license": "ISC",
+  "author": "Aman Shahi",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "": ""
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.7.2",
+    "node-cache": "^5.1.2",
+    "puppeteer": "^25.2.0"
+  }
+}
