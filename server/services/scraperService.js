@@ -51,19 +51,22 @@ export async function scrapeAllPosts(username) {
       const seen = new Set();
       
       document.querySelectorAll("a").forEach((a) => {
-        const href = a.href;
+        const rawHref = a.href;
+        if (!rawHref) return;
+
+        // Clean query parameters and trailing slashes first
+        const cleanLink = rawHref.split("?")[0].replace(/\/$/, "");
         
         if (
-          href &&
-          href.includes("medium.com") &&
-          href.includes("-") &&
-          href.match(/[a-f0-9]{8,}/) &&
-          !href.includes("/tag/") &&
-          !href.includes("/about") &&
-          !href.includes("/followers") &&
-          !seen.has(href.split("?")[0])
+          cleanLink.includes("medium.com") &&
+          (cleanLink.includes("-") || cleanLink.includes("/p/")) &&
+          cleanLink.match(/[a-f0-9]{8,}/) &&
+          !cleanLink.includes("/tag/") &&
+          !cleanLink.includes("/about") &&
+          !cleanLink.includes("/followers") &&
+          !cleanLink.includes("/m/signin") &&
+          !seen.has(cleanLink)
         ) {
-          const cleanLink = href.split("?")[0];
           seen.add(cleanLink);
           
           const container = a.closest("article") || a.parentElement?.parentElement;
