@@ -109,7 +109,7 @@ export function parseRssXml(xml, username) {
       posts.push({
         username: username.toLowerCase(),
         title: decodeHtmlEntities(title),
-        link: link.trim(),
+        link: link.split("?")[0].trim(),
         pubDate: pubDate || new Date().toISOString(),
         author: decodeHtmlEntities(creator) || username,
         categories: categories.map((c) => decodeHtmlEntities(c)),
