@@ -27,21 +27,32 @@ export async function fetchPostsForNewUser(username) {
     return 0;
   }
 
-  // Save/Update posts in MongoDB
-  const savePromises = scrapedPosts.map((post) => {
+  // Deduplicate posts by postId before storing to prevent parallel upsert race conditions
+  const uniquePosts = [];
+  const seenPostIds = new Set();
+
+  for (const post of scrapedPosts) {
     const postId = extractMediumPostId(post.link);
-    return Post.findOneAndUpdate(
-      { postId }, // Find by unique postId
-      { $set: { ...post, postId } }, // Update with new data and set postId
+    if (postId && !seenPostIds.has(postId)) {
+      seenPostIds.add(postId);
+      uniquePosts.push({ ...post, postId });
+    }
+  }
+
+  // Save/Update posts in MongoDB
+  const savePromises = uniquePosts.map((post) =>
+    Post.findOneAndUpdate(
+      { postId: post.postId }, // Find by unique postId
+      { $set: post }, // Update with new data
       { upsert: true, new: true }, // Create if doesn't exist
-    );
-  });
+    )
+  );
 
   await Promise.all(savePromises);
   console.log(
-    `✅ Successfully stored ${scrapedPosts.length} historical posts for @${username}`,
+    `✅ Successfully stored ${uniquePosts.length} historical posts for @${username}`,
   );
-  return scrapedPosts.length;
+  return uniquePosts.length;
 }
 
 /**
@@ -67,19 +78,30 @@ export async function syncNewPostsViaRSS(username) {
       return 0;
     }
 
-    // Save/Update newest posts in MongoDB
-    const savePromises = parsedPosts.map((post) => {
+    // Deduplicate RSS posts by postId before storing to prevent parallel upsert race conditions
+    const uniquePosts = [];
+    const seenPostIds = new Set();
+
+    for (const post of parsedPosts) {
       const postId = extractMediumPostId(post.link);
-      return Post.findOneAndUpdate(
-        { postId }, // Find by unique postId
-        { $set: { ...post, postId } }, // Update with new data and set postId
+      if (postId && !seenPostIds.has(postId)) {
+        seenPostIds.add(postId);
+        uniquePosts.push({ ...post, postId });
+      }
+    }
+
+    // Save/Update newest posts in MongoDB
+    const savePromises = uniquePosts.map((post) =>
+      Post.findOneAndUpdate(
+        { postId: post.postId }, // Find by unique postId
+        { $set: post }, // Update with new data
         { upsert: true, new: true },
-      );
-    });
+      )
+    );
 
     await Promise.all(savePromises);
     console.log(`🔄 RSS sync complete for @${normalizedUsername}.`);
-    return parsedPosts.length;
+    return uniquePosts.length;
   } catch (error) {
     console.error(
       `❌ RSS sync failed for @${normalizedUsername}:`,
