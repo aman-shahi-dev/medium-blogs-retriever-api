@@ -36,13 +36,23 @@ export async function scrapeAllPosts(username) {
 
     // Scroll to the bottom to load ALL posts
     // Medium uses infinite scroll - posts load as you scroll down
+    // We allow multiple consecutive stalls before stopping, because
+    // Medium's lazy loading can be slow on remote servers like Render.
     let previousHeight;
-    while (true) {
+    let stalls = 0;
+    const MAX_STALLS = 3; // Allow up to 3 consecutive stalls before giving up
+
+    while (stalls < MAX_STALLS) {
       previousHeight = await page.evaluate(() => document.body.scrollHeight);
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // wait for 2 seconds
+      await new Promise((resolve) => setTimeout(resolve, 3000)); // wait 3 seconds
       const newHeight = await page.evaluate(() => document.body.scrollHeight);
-      if (newHeight === previousHeight) break; // No more posts to load
+
+      if (newHeight === previousHeight) {
+        stalls++;
+      } else {
+        stalls = 0; // reset on successful scroll
+      }
     }
 
     // Extract all post data from the page
