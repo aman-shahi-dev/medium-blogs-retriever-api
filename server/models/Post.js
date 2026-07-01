@@ -8,12 +8,17 @@ const postSchema = new mongoose.Schema(
       lowercase: true,
       index: true,
     },
+    postId: {
+      type: String,
+      unique: true,
+      required: true,
+      index: true,
+    },
     title: {
       type: String,
     },
     link: {
       type: String,
-      unique: true,
       required: true,
     },
     pubDate: {

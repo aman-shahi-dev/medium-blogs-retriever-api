@@ -1,6 +1,7 @@
 import { Post } from "../models/Post.js";
 import { parseRssXml } from "../utils/rssParser.js";
 import { scrapeAllPosts } from "./scraperService.js";
+import { extractMediumPostId } from "../utils/urlHelper.js";
 
 /**
  * Fetch all posts for a user from MongoDB, sorted by publication date
@@ -27,13 +28,14 @@ export async function fetchPostsForNewUser(username) {
   }
 
   // Save/Update posts in MongoDB
-  const savePromises = scrapedPosts.map((post) =>
-    Post.findOneAndUpdate(
-      { link: post.link }, // Find by unique link URL
-      { $set: post }, // Update with new data
-      { upsert: true, new: true }, // Create if doesn't exist (upsert)
-    ),
-  );
+  const savePromises = scrapedPosts.map((post) => {
+    const postId = extractMediumPostId(post.link);
+    return Post.findOneAndUpdate(
+      { postId }, // Find by unique postId
+      { $set: { ...post, postId } }, // Update with new data and set postId
+      { upsert: true, new: true }, // Create if doesn't exist
+    );
+  });
 
   await Promise.all(savePromises);
   console.log(
@@ -66,13 +68,14 @@ export async function syncNewPostsViaRSS(username) {
     }
 
     // Save/Update newest posts in MongoDB
-    const savePromises = parsedPosts.map((post) =>
-      Post.findOneAndUpdate(
-        { link: post.link },
-        { $set: post }, // RSS posts have full HTML content & dates, which will enrich the Puppeteer placeholders!
+    const savePromises = parsedPosts.map((post) => {
+      const postId = extractMediumPostId(post.link);
+      return Post.findOneAndUpdate(
+        { postId }, // Find by unique postId
+        { $set: { ...post, postId } }, // Update with new data and set postId
         { upsert: true, new: true },
-      ),
-    );
+      );
+    });
 
     await Promise.all(savePromises);
     console.log(`🔄 RSS sync complete for @${normalizedUsername}.`);

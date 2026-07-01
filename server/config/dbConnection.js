@@ -6,11 +6,9 @@ export async function connectDB() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("MongoDB Connected Successfully ✅");
 
-    // Clean up any legacy duplicate entries that contain query parameters in their links
-    const cleanupResult = await Post.deleteMany({ link: { $regex: /\?/ } });
-    if (cleanupResult.deletedCount > 0) {
-      console.log(`🧹 Database Cleanup: Removed ${cleanupResult.deletedCount} legacy duplicate entries.`);
-    }
+    // Wiping the entire database once to clear out legacy schemas and apply unique postId indexes cleanly
+    await Post.deleteMany({});
+    console.log("🧹 Database Wiped: Legacy entries cleared to apply new schema index.");
   } catch (error) {
     console.error("Error while connecting to MongoDB ❌", error.message);
     process.exit(1);
