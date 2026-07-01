@@ -53,7 +53,15 @@ router.get("/posts/:username", async (req, res) => {
         });
       }
 
-      // Get the newly scraped posts from DB
+      // Immediately run the RSS sync to enrich the scraped articles with dates, tags, and excerpts
+      try {
+        console.log(`📡 Enriching scraped posts with RSS data for @${normalizedUsername}...`);
+        await syncNewPostsViaRSS(normalizedUsername);
+      } catch (rssErr) {
+        console.warn(`Warning: RSS enrichment failed for @${normalizedUsername}:`, rssErr.message);
+      }
+
+      // Get the newly scraped and enriched posts from DB
       posts = await getPostsByUsername(normalizedUsername);
     } else {
       // 4. Handle Returning User (Posts in DB)
