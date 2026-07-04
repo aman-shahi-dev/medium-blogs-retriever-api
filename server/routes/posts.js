@@ -25,7 +25,7 @@ router.get("/posts/:username", async (req, res) => {
     });
   }
 
-  const normalizedUsername = username.toLowerCase();
+  const normalizedUsername = username.replace(/^@/, "").toLowerCase();
   const cacheKey = `posts_${normalizedUsername}`;
 
   try {
@@ -33,6 +33,9 @@ router.get("/posts/:username", async (req, res) => {
     const cachedData = cache.get(cacheKey);
     if (cachedData) {
       console.log(`⚡ Cache HIT for @${normalizedUsername}`);
+      if (cachedData.success === false) {
+        return res.status(cachedData.status || 404).json(cachedData);
+      }
       return res.json(cachedData);
     }
 
@@ -47,10 +50,14 @@ router.get("/posts/:username", async (req, res) => {
 
       const count = await fetchPostsForNewUser(normalizedUsername);
       if (count === 0) {
-        return res.status(404).json({
+        const errorResponse = {
           success: false,
+          status: 404,
           message: `No posts found for user @${normalizedUsername} or user does not exist.`,
-        });
+        };
+        // Cache the empty state to prevent subsequent Puppeteer scrapers
+        cache.set(cacheKey, errorResponse);
+        return res.status(404).json(errorResponse);
       }
 
       // Immediately run the RSS sync to enrich the scraped articles with dates, tags, and excerpts
